@@ -121,7 +121,7 @@
       (select-window $current-win))
     (pop-to-buffer manage-minor-mode-buffer)
     (set (make-local-variable 'manage-minor-mode-target-buffer) $current-buf)
-    (cl-dotimes ($i $max-line)
+    (cl-dotimes (ignored $max-line)
       (insert (format "|  \n")))
     ;; Insert inactive minor-modes
     (goto-char (point-min))
