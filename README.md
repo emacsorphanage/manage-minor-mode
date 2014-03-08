@@ -1,4 +1,4 @@
-# Manage your minor-mode on dedicated interface buffer
+# Manage your minor-mode on the dedicated interface buffer
 
 ![manage-minor-mode](https://raw2.github.com/ShingoFukuyama/images/master/manage-minor-mode.png)
 
