@@ -121,6 +121,7 @@
       (kill-buffer manage-minor-mode-buffer)
       (select-window $current-win))
     (pop-to-buffer manage-minor-mode-buffer)
+    (setq truncate-lines t)
     (set (make-local-variable 'manage-minor-mode-target-buffer) $current-buf)
     (cl-dotimes (ignored $max-line)
       (insert (format "|  \n")))
@@ -149,6 +150,8 @@
           $act)
     ;; header
     (goto-char (point-min))
+    (insert (format "Minor Modes in '%s' buffer\n"
+                    manage-minor-mode-target-buffer))
     (insert (concat "Active" "  |  " "Inactive" "\n"))
     (when $last-toggled-item
       (goto-char (point-min))
