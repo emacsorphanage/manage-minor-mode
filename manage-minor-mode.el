@@ -61,17 +61,17 @@
 (defvar manage-minor-mode-target-buffer nil)
 
 (defface manage-minor-mode-face-active
-  '((t :foreground "#33eeeee"))
+  '((t :inherit success :foreground "#33eeeee"))
   "Face for active minor modes"
   :group 'manage-minor-mode)
 
 (defface manage-minor-mode-face-inactive
-  '((t :foreground "#ff6666"))
+  '((t :inherit warning :foreground "#ff6666"))
   "Face for inactive minor modes"
   :group 'manage-minor-mode)
 
 (defface manage-minor-mode-face-changed
-  '((t :foreground "#7700ff" :background "#ffffff"))
+  '((t :inherit underline :foreground "#eeee00"))
   "Face for last changed minor modes"
   :group 'manage-minor-mode)
 
