@@ -184,5 +184,19 @@ However, don't worry, restore command exists:
           (manage-minor-mode--enable $m))
         manage-minor-mode-modes-before-bals))
 
+;; Mouse click minor-mode in mode-line to popup "Manage minor modes"
+(defadvice popup-menu (before manage-minor-mode-add-for-popup-menu disable)
+  (ad-set-arg 0 (append (ad-get-arg 0)
+                        '((manage-minor-mode
+                           menu-item "Manage minor modes"
+                           (lambda () (interactive) (manage-minor-mode)))))))
+
+(defadvice minor-mode-menu-from-indicator (around manage-minor-mode-add-mode-line-menu activate)
+  (ad-enable-advice 'popup-menu 'before 'manage-minor-mode-add-for-popup-menu)
+  (ad-activate 'popup-menu)
+  ad-do-it
+  (ad-disable-advice 'popup-menu 'before 'manage-minor-mode-add-for-popup-menu)
+  (ad-activate 'popup-menu))
+
 (provide 'manage-minor-mode)
 ;;; manage-minor-mode.el ends here
