@@ -59,6 +59,7 @@
 
 (defvar manage-minor-mode-buffer "*manage-minor-mode*")
 (defvar manage-minor-mode-target-buffer nil)
+(defvar manage-minor-mode-target-window nil)
 
 (defface manage-minor-mode-face-active
   '((t :inherit success :foreground "#33eeeee"))
@@ -91,6 +92,8 @@
 (defsubst manage-minor-mode--disable ($mode)
   (funcall $mode 0))
 
+(defvar manage-minor-mode-window-config nil)
+
 (defun manage-minor-mode--toggle ()
   "Toggle a minor-mode status under the cursor"
   (interactive)
@@ -100,11 +103,13 @@
       (active   (let (($mode (intern (thing-at-point 'symbol))))
                   (with-current-buffer manage-minor-mode-target-buffer
                     (manage-minor-mode--disable $mode)
+                    (set-window-configuration manage-minor-mode-window-config)
                     (manage-minor-mode $mode)
                     (manage-minor-mode--goto-line $li))))
       (inactive (let (($mode (intern (thing-at-point 'symbol))))
                   (with-current-buffer manage-minor-mode-target-buffer
                     (manage-minor-mode--enable $mode)
+                    (set-window-configuration manage-minor-mode-window-config)
                     (manage-minor-mode $mode)
                     (manage-minor-mode--goto-line $li)
                     (goto-char (point-at-eol))
@@ -112,6 +117,7 @@
 
 (defun manage-minor-mode (&optional $last-toggled-item)
   (interactive)
+  (setq manage-minor-mode-window-config (current-window-configuration))
   (let* (($act   (manage-minor-mode--active-list))
          ($inact (manage-minor-mode--inactive-list))
          ($max-line (+ (length $act) (length $inact)))
@@ -123,6 +129,7 @@
     (pop-to-buffer manage-minor-mode-buffer)
     (setq truncate-lines t)
     (set (make-local-variable 'manage-minor-mode-target-buffer) $current-buf)
+    (set (make-local-variable 'manage-minor-mode-target-window) $current-win)
     (cl-dotimes (ignored $max-line)
       (insert (format "|  \n")))
     ;; Insert inactive minor-modes
