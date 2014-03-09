@@ -78,6 +78,7 @@
 (defvar manage-minor-mode-map
   (let (($map (make-sparse-keymap)))
     (define-key $map (kbd "RET") 'manage-minor-mode--toggle)
+    (define-key $map (kbd "<mouse-1>") 'manage-minor-mode--toggle)
     $map))
 
 (defun manage-minor-mode--goto-line ($line)
@@ -131,7 +132,8 @@
              (propertize
               (format "%s" $m)
               'face 'manage-minor-mode-face-inactive
-              'manage-minor-mode 'inactive))
+              'manage-minor-mode 'inactive
+              'pointer           'hand))
             (forward-line))
           $inact)
     ;; Insert active minor-modes
@@ -141,7 +143,8 @@
              (propertize
               (format "%s  " $m)
               'face 'manage-minor-mode-face-active
-              'manage-minor-mode 'active))
+              'manage-minor-mode 'active
+              'pointer           'hand))
             (forward-line))
           $act)
     ;; header
