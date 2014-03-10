@@ -360,10 +360,10 @@ Set minor-mode active/inactive when major-mode changed.
                    (format "%s" $major-mode)
                    'face 'manage-minor-mode-face-active)))
     (if manage-minor-mode-always-show-keybind
-        (insert (concat "g:   Refresh buffer\n"
-                        "e:   Enable the whole session [E]\n"
-                        "d:   Disable the whole session [D]\n"
-                        "r:   Release out of enable/disable list\n"
+        (insert (concat "g:   Refresh this buffer\n"
+                        "e:   Enable  in the whole session [E]\n"
+                        "d:   Disable in the whole session [D]\n"
+                        "r:   Release out of the enable/disable list\n"
                         "RET: Toggle active/inactive\n"
                         "\n")))
     (insert (concat "Active" "  |  " "Inactive" "\n"))
