@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2014 by Shingo Fukuyama
 
-;; Version: 1.0
+;; Version: 1.1
 ;; Author: Shingo Fukuyama - http://fukuyama.co
 ;; URL: https://github.com/ShingoFukuyama/manage-minor-mode
 ;; Created: Mar 8 2014
@@ -58,8 +58,6 @@
   :group 'convenience)
 
 (defvar manage-minor-mode-buffer "*manage-minor-mode*")
-(defvar manage-minor-mode-target-buffer nil)
-(defvar manage-minor-mode-target-window nil)
 
 (defface manage-minor-mode-face-active
   '((t :inherit success :foreground "#33eeeee"))
@@ -78,8 +76,9 @@
 
 (defvar manage-minor-mode-map
   (let (($map (make-sparse-keymap)))
-    (define-key $map (kbd "RET") 'manage-minor-mode--toggle)
-    (define-key $map (kbd "<mouse-1>") 'manage-minor-mode--toggle)
+    (define-key $map (kbd "RET") 'manage-minor-mode-toggle)
+    (define-key $map (kbd "<mouse-1>") 'manage-minor-mode-toggle)
+    (define-key $map (kbd "g") 'manage-minor-mode-refresh)
     $map))
 
 (defun manage-minor-mode--goto-line ($line)
@@ -87,49 +86,111 @@
   (forward-line (- $line 1)))
 
 (defsubst manage-minor-mode--enable ($mode)
-  (funcall $mode 1))
+  (ignore-errors (funcall $mode 1)))
 
 (defsubst manage-minor-mode--disable ($mode)
-  (funcall $mode 0))
+  (ignore-errors (funcall $mode 0)))
+
+(defvar manage-minor-mode-default nil
+  "
+Set minor-mode active/inactive when major-mode changed.
+
+;; Value structure:
+'((major-mode1 (on  minor-mode1 minor-mode2 ...)
+               (off minor-mode3 minor-mode4 ...))
+  (major-mode2 (on  minor-mode5 minor-mode6 ...)
+               (off minor-mode7 minor-mode8 ...))
+  ...)
+
+;; Example
+(setq manage-minor-mode-default
+      '((emacs-lisp-mode
+         (on  rainbow-delimiters-mode eldoc-mode show-paren-mode)
+         (off line-number-mode))
+        (js2-mode
+         (on  color-identifiers-mode)
+         (off line-number-mode)))) ")
+
+;;;###autoload
+(defun manage-minor-mode-set ()
+  (when (and manage-minor-mode-default
+             (assoc-default major-mode manage-minor-mode-default))
+    (let* (($major  (assoc-default major-mode manage-minor-mode-default))
+           ($major-on  (assoc-default 'on  $major))
+           ($major-off (assoc-default 'off $major)))
+      (mapc (lambda ($m) (manage-minor-mode--enable $m)) $major-on)
+      (mapc (lambda ($m) (manage-minor-mode--disable $m)) $major-off))))
+
+(add-hook 'after-change-major-mode-hook 'manage-minor-mode-set t)
 
 (defvar manage-minor-mode-window-config nil)
 
-(defun manage-minor-mode--toggle ()
+(defun manage-minor-mode--buffer-p ()
+  (equal (buffer-name (current-buffer)) manage-minor-mode-buffer))
+
+
+(defvar manage-minor-mode-target-info nil)
+
+(defun manage-minor-mode--get-target-info ($key)
+  (car (assoc-default $key manage-minor-mode-target-info)))
+
+(defun manage-minor-mode-refresh (&optional $mode-for-highlight $line $column)
+  "Redraw the `*manabe-minor-mode*' buffer"
+  (interactive)
+  (let (($li (or $line (line-number-at-pos)))
+        ($cl (or $column (current-column))))
+    (set-window-configuration manage-minor-mode-window-config)
+    (if (manage-minor-mode--buffer-p)
+        (with-current-buffer (manage-minor-mode--get-target-info 'buffer)
+          (manage-minor-mode $mode-for-highlight))
+      (manage-minor-mode $mode-for-highlight))
+    (manage-minor-mode--goto-line $li)
+    (line-move-to-column $cl)
+    (when (called-interactively-p 'any)
+      (message (format "Refreshed '%s'" manage-minor-mode-buffer)))))
+
+(defun manage-minor-mode-toggle ()
   "Toggle a minor-mode status under the cursor"
   (interactive)
   (let (($po (if (eolp) (- (point) 1) (point)))
-        ($li (line-number-at-pos)))
+        ($li (line-number-at-pos))
+        ($cl (current-column))
+        ($buf (manage-minor-mode--get-target-info 'buffer)))
     (cl-case (get-text-property $po 'manage-minor-mode)
       (active   (let (($mode (intern (thing-at-point 'symbol))))
-                  (with-current-buffer manage-minor-mode-target-buffer
+                  (with-current-buffer $buf
                     (manage-minor-mode--disable $mode)
-                    (set-window-configuration manage-minor-mode-window-config)
-                    (manage-minor-mode $mode)
-                    (manage-minor-mode--goto-line $li))))
+                    (manage-minor-mode-refresh $mode $li $cl))))
       (inactive (let (($mode (intern (thing-at-point 'symbol))))
-                  (with-current-buffer manage-minor-mode-target-buffer
+                  (with-current-buffer $buf
                     (manage-minor-mode--enable $mode)
-                    (set-window-configuration manage-minor-mode-window-config)
-                    (manage-minor-mode $mode)
-                    (manage-minor-mode--goto-line $li)
-                    (goto-char (point-at-eol))
-                    (goto-char (previous-single-property-change (point) 'manage-minor-mode))))))))
+                    (manage-minor-mode-refresh $mode $li $cl)))))))
 
+(defun manage-minor-mode--kill-buffer ($after-select-window)
+  (when (get-buffer manage-minor-mode-buffer)
+    (kill-buffer manage-minor-mode-buffer)
+    (select-window $after-select-window)))
+
+;;;###autoload
 (defun manage-minor-mode (&optional $last-toggled-item)
   (interactive)
+  (and $last-toggled-item
+       (not (listp $last-toggled-item))
+       (setq $last-toggled-item (cons $last-toggled-item nil)))
   (setq manage-minor-mode-window-config (current-window-configuration))
   (let* (($act   (manage-minor-mode--active-list))
          ($inact (manage-minor-mode--inactive-list))
          ($max-line (+ (length $act) (length $inact)))
          ($current-buf (current-buffer))
-         ($current-win (get-buffer-window $current-buf)))
-    (when (get-buffer manage-minor-mode-buffer)
-      (kill-buffer manage-minor-mode-buffer)
-      (select-window $current-win))
+         ($current-win (get-buffer-window $current-buf))
+         ($major-mode major-mode))
+    (manage-minor-mode--kill-buffer $current-win)
     (pop-to-buffer manage-minor-mode-buffer)
     (setq truncate-lines t)
-    (set (make-local-variable 'manage-minor-mode-target-buffer) $current-buf)
-    (set (make-local-variable 'manage-minor-mode-target-window) $current-win)
+    (set (make-local-variable 'manage-minor-mode-target-info)
+         `((buffer      ,$current-buf)
+           (window      ,$current-win)
+           (major-mode  ,$major-mode)))
     (cl-dotimes (ignored $max-line)
       (insert (format "|  \n")))
     ;; Insert inactive minor-modes
@@ -148,54 +209,117 @@
     (goto-char (point-min))
     (mapc (lambda ($m)
             (insert
-             (propertize
-              (format "%s  " $m)
-              'face 'manage-minor-mode-face-active
-              'manage-minor-mode 'active
-              'pointer           'hand))
+             (concat
+              (propertize
+               (format "%s" $m)
+               'face 'manage-minor-mode-face-active
+               'manage-minor-mode 'active
+               'pointer           'hand)
+              "  "))
             (forward-line))
           $act)
     ;; header
     (goto-char (point-min))
-    (insert (format "Minor Modes in '%s' buffer\n"
-                    manage-minor-mode-target-buffer))
+    (setq header-line-format
+          (concat "buffer: "
+                  (propertize
+                   (format "%s" $current-buf)
+                   'face 'manage-minor-mode-face-active)
+                  "  major-mode: "
+                  (propertize
+                   (format "%s" $major-mode)
+                   'face 'manage-minor-mode-face-active)))
     (insert (concat "Active" "  |  " "Inactive" "\n"))
-    (when $last-toggled-item
-      (goto-char (point-min))
-      (when (re-search-forward (concat "\\_<"
-                                       (format "%s" $last-toggled-item)
-                                       "\\_>") nil t)
-        (put-text-property (match-beginning 0) (match-end 0)
-                           'face 'manage-minor-mode-face-changed)))
     ;; Adjust buffer
     (goto-char (point-min))
     (while (re-search-forward "^\\s-*|\\s-*$" nil t)
       (delete-region (match-beginning 0) (match-end 0)))
     (align-regexp (point-min) (point-max) "\\(\\s-*\\)|")
+    ;; highlight last toggled mode
+    (when $last-toggled-item
+      (mapc (lambda ($m)
+              (goto-char (point-min))
+              (when (re-search-forward (concat "\\_<"
+                                               (format "%s" $m)
+                                               "\\_>") nil t)
+                (put-text-property (match-beginning 0) (match-end 0)
+                                   'face 'manage-minor-mode-face-changed)))
+            $last-toggled-item))
     (goto-char (point-min))
     (read-only-mode)
     (use-local-map manage-minor-mode-map)))
 
 (defvar manage-minor-mode-modes-before-bals nil)
 
+(defvar manage-minor-mode-bals-exclude-list nil
+  "
+You can specify minor-modes list which evade from the eradication by `manage-minor-mode-bals'.
+
+;; Value structure:
+'((global     (minor-mode1 minor-mode2 ...))
+  (major-mode (minor-mode1 minor-mode2 ...))
+  (major-mode (minor-mode1 minor-mode2 ...))
+  ...)
+
+;; Example
+(setq manage-minor-mode-bals-exclude-list
+      '((global (recentf-mode global-font-lock-mode delete-selection-mode transient-mark-mode tabbar-mode))
+        (text-mode (line-number-mode))
+        (org-mode (line-number-mode blink-cursor-mode)))) ")
+
+;;;###autoload
 (defun manage-minor-mode-bals ()
-  "Eradicate all minor-modes in the current buffer.
+  "
+Eradicate all minor-modes in the current buffer.
 This command may cause unexpected effect even to other buffers.
 However, don't worry, restore command exists:
- `manage-minor-mode-restore-from-bals'."
+ `manage-minor-mode-restore-from-bals'.
+"
   (interactive)
-  (set (make-local-variable 'manage-minor-mode-modes-before-bals)
-       (manage-minor-mode--active-list))
-  (mapc (lambda ($m)
-          (manage-minor-mode--disable $m))
-        manage-minor-mode-modes-before-bals))
+  (let (($restore-variable (manage-minor-mode--active-list))
+        $switched)
+    (cl-flet
+        ((set-restore-variable
+          () (set (make-local-variable 'manage-minor-mode-modes-before-bals)
+                  $restore-variable))
+         (bals
+          () (let (($excludes
+                    (append
+                     (car (assoc-default 'global manage-minor-mode-bals-exclude-list))
+                     (car (assoc-default
+                           (if (manage-minor-mode--buffer-p)
+                               (manage-minor-mode--get-target-info 'major-mode)
+                             major-mode)
+                           manage-minor-mode-bals-exclude-list)))))
+               (mapc (lambda ($m)
+                       (unless (memq $m $excludes)
+                         (manage-minor-mode--disable $m)
+                         (setq $switched (cons $m $switched))))
+                     $restore-variable))))
+      (if (manage-minor-mode--buffer-p)
+          (progn
+            (with-current-buffer (manage-minor-mode--get-target-info 'buffer)
+              (bals)
+              (set-restore-variable))
+            (manage-minor-mode-refresh $switched 2 1)
+            (set-restore-variable))
+        (set-restore-variable)
+        (bals)))))
 
 (defun manage-minor-mode-restore-from-bals ()
-  "Restore minor modes before `manage-minor-mode-bals' happened"
+  "Restore minor modes to before `manage-minor-mode-bals' happened"
   (interactive)
-  (mapc (lambda ($m)
-          (manage-minor-mode--enable $m))
-        manage-minor-mode-modes-before-bals))
+  (if (manage-minor-mode--buffer-p)
+      (let ($switched)
+        (with-current-buffer (manage-minor-mode--get-target-info 'buffer)
+          (mapc (lambda ($m)
+                  (manage-minor-mode--enable $m)
+                  (setq $switched (cons $m $switched)))
+                manage-minor-mode-modes-before-bals))
+        (manage-minor-mode-refresh $switched 2 1))
+    (mapc (lambda ($m)
+            (manage-minor-mode--enable $m))
+          manage-minor-mode-modes-before-bals)))
 
 ;; Mouse click minor-mode in mode-line to popup "Manage minor modes"
 (defadvice popup-menu (before manage-minor-mode-add-for-popup-menu disable)
