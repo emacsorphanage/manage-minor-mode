@@ -74,11 +74,18 @@
   "Face for last changed minor modes"
   :group 'manage-minor-mode)
 
+(defcustom manage-minor-mode-always-show-keybind t
+  "Show keybind on the top of the buffer"
+  :group 'manage-minor-mode :type 'boolean)
+
 (defvar manage-minor-mode-map
   (let (($map (make-sparse-keymap)))
     (define-key $map (kbd "RET") 'manage-minor-mode-toggle)
     (define-key $map (kbd "<mouse-1>") 'manage-minor-mode-toggle)
     (define-key $map (kbd "g") 'manage-minor-mode-refresh)
+    (define-key $map (kbd "e") 'manage-minor-mode-whole-session-enable)
+    (define-key $map (kbd "d") 'manage-minor-mode-whole-session-disable)
+    (define-key $map (kbd "r") 'manage-minor-mode-whole-session-release)
     $map))
 
 (defun manage-minor-mode--goto-line ($line)
@@ -96,32 +103,154 @@
 Set minor-mode active/inactive when major-mode changed.
 
 ;; Value structure:
-'((major-mode1 (on  minor-mode1 minor-mode2 ...)
-               (off minor-mode3 minor-mode4 ...))
-  (major-mode2 (on  minor-mode5 minor-mode6 ...)
-               (off minor-mode7 minor-mode8 ...))
+'((global      (on  minor-mode minor-mode ...)
+               (off minor-mode minor-mode ...))
+  (major-mode1 (on  minor-mode minor-mode ...)
+               (off minor-mode minor-mode ...))
+  (major-mode2 (on  minor-mode minor-mode ...)
+               (off minor-mode minor-mode ...))
   ...)
 
 ;; Example
 (setq manage-minor-mode-default
-      '((emacs-lisp-mode
-         (on  rainbow-delimiters-mode eldoc-mode show-paren-mode)
-         (off line-number-mode))
+      '((global
+         (on   rainbow-mode hl-line-mode)
+         (off  line-number-mode))
+        (emacs-lisp-mode
+         (on   rainbow-delimiters-mode eldoc-mode show-paren-mode))
         (js2-mode
-         (on  color-identifiers-mode)
-         (off line-number-mode)))) ")
+         (on   color-identifiers-mode)
+         (off  flycheck-mode)))) ")
 
 ;;;###autoload
 (defun manage-minor-mode-set ()
-  (when (and manage-minor-mode-default
-             (assoc-default major-mode manage-minor-mode-default))
-    (let* (($major  (assoc-default major-mode manage-minor-mode-default))
+  (when manage-minor-mode-default
+    (let* (($global (assoc-default 'global manage-minor-mode-default))
+           ($global-on  (assoc-default 'on  $global))
+           ($global-off (assoc-default 'off $global))
+           ($major  (assoc-default major-mode manage-minor-mode-default))
            ($major-on  (assoc-default 'on  $major))
-           ($major-off (assoc-default 'off $major)))
-      (mapc (lambda ($m) (manage-minor-mode--enable $m)) $major-on)
-      (mapc (lambda ($m) (manage-minor-mode--disable $m)) $major-off))))
+           ($major-off (assoc-default 'off $major))
+           ($on  (append $global-on  $major-on))
+           ($off (append $global-off $major-off)))
+      (mapc (lambda ($m) (manage-minor-mode--enable  $m)) $on)
+      (mapc (lambda ($m) (manage-minor-mode--disable $m)) $off))))
 
 (add-hook 'after-change-major-mode-hook 'manage-minor-mode-set t)
+
+(defun manage-minor-mode-whole-session-enable ()
+  "Enable minor-mode on the whole session"
+  (interactive)
+  (let (($po (if (eolp) (- (point) 1) (point)))
+        $mode)
+    (when (get-text-property $po 'manage-minor-mode)
+      (setq $mode (intern (thing-at-point 'symbol)))
+      (mapc (lambda ($buf)
+              (with-current-buffer $buf
+                (manage-minor-mode--enable $mode)))
+            (buffer-list))
+      (let* (($global (assoc-default 'global manage-minor-mode-default))
+             ($on  (assq 'on  $global))
+             ($off (assq 'off $global)))
+        (cond ((not $global)
+               (setq manage-minor-mode-default
+                     (cons '(global (on) (off)) manage-minor-mode-default)))
+              ((and $global (not $on) $off)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `((on) ,$off)))
+              ((and $global (not $off) $on)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `(,$on (off)))))
+        (setf (cdr (assq 'on  (assoc-default 'global manage-minor-mode-default)))
+              (cons $mode (cdr $on)))
+        (setf (cdr (assq 'off (assoc-default 'global manage-minor-mode-default)))
+              (delq $mode (cdr $off))))
+      (manage-minor-mode-refresh $mode))))
+
+(defun manage-minor-mode-whole-session-disable ()
+  "Disable minor-mode on the whole session"
+  (interactive)
+  (let (($po (if (eolp) (- (point) 1) (point)))
+        $mode)
+    (when (get-text-property $po 'manage-minor-mode)
+      (setq $mode (intern (thing-at-point 'symbol)))
+      (mapc (lambda ($buf)
+              (with-current-buffer $buf
+                (manage-minor-mode--disable $mode)))
+            (buffer-list))
+      (let* (($global (assoc-default 'global manage-minor-mode-default))
+             ($on  (assq 'on  $global))
+             ($off (assq 'off $global)))
+        (cond ((not $global)
+               (setq manage-minor-mode-default
+                     (cons '(global (on) (off)) manage-minor-mode-default)))
+              ((and $global (not $on) $off)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `((on) ,$off)))
+              ((and $global (not $off) $on)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `(,$on (off)))))
+        (setf (cdr (assq 'on  (assoc-default 'global manage-minor-mode-default)))
+              (delq $mode (cdr $on)))
+        (setf (cdr (assq 'off (assoc-default 'global manage-minor-mode-default)))
+              (cons $mode (cdr $off))))
+      (manage-minor-mode-refresh $mode))))
+
+(defun manage-minor-mode-whole-session-release ()
+  "Disable minor-mode on the whole session"
+  (interactive)
+  (let ($mode)
+    (when (get-text-property (point) 'manage-minor-mode)
+      (setq $mode (intern (thing-at-point 'symbol)))
+      (let* (($global (assoc-default 'global manage-minor-mode-default))
+             ($on  (assq 'on  $global))
+             ($off (assq 'off $global)))
+        (cond ((not $global)
+               (setq manage-minor-mode-default
+                     (cons '(global (on) (off)) manage-minor-mode-default)))
+              ((and $global (not $on) $off)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `((on) ,$off)))
+              ((and $global (not $off) $on)
+               (setf (cdr (assq 'global manage-minor-mode-default))
+                     `(,$on (off)))))
+        (setf (cdr (assq 'on  (assoc-default 'global manage-minor-mode-default)))
+              (delq $mode (cdr $on)))
+        (setf (cdr (assq 'off (assoc-default 'global manage-minor-mode-default)))
+              (delq $mode (cdr $off))))
+      (manage-minor-mode-refresh))))
+
+(defun manage-minor-mode-whole-session-show ()
+  "Show globally enable/disable list"
+  (let* (($global  (assoc-default 'global manage-minor-mode-default))
+         ($enable  (assoc-default 'on  $global))
+         ($disable (assoc-default 'off $global)))
+    (when $enable
+      (mapc (lambda ($m)
+              (goto-char (point-min))
+              (when (re-search-forward (concat "\\_<"
+                                               (format "%s" $m)
+                                               "\\_>") nil t)
+                (let (($ov (make-overlay (match-beginning 0) (match-end 0))))
+                  (if (not (save-excursion (goto-char (match-end 0)) (eolp)))
+                      (delete-char 3))
+                  (overlay-put $ov 'after-string
+                               (propertize
+                                "[E]"
+                                'face '(:foreground "#ffff00" :background "#555555"))))))
+            $enable))
+    (when $disable
+      (mapc (lambda ($m)
+              (goto-char (point-min))
+              (when (re-search-forward (concat "\\_<"
+                                               (format "%s" $m)
+                                               "\\_>") nil t)
+                (let (($ov (make-overlay (match-beginning 0) (match-end 0))))
+                  (overlay-put $ov 'after-string
+                               (propertize
+                                "[D]"
+                                'face '(:foreground "#eeee00" :background "#333333"))))))
+            $disable))))
 
 (defvar manage-minor-mode-window-config nil)
 
@@ -215,7 +344,8 @@ Set minor-mode active/inactive when major-mode changed.
                'face 'manage-minor-mode-face-active
                'manage-minor-mode 'active
                'pointer           'hand)
-              "  "))
+              "     " ;; 5 spaces
+              ))
             (forward-line))
           $act)
     ;; header
@@ -229,12 +359,20 @@ Set minor-mode active/inactive when major-mode changed.
                   (propertize
                    (format "%s" $major-mode)
                    'face 'manage-minor-mode-face-active)))
+    (if manage-minor-mode-always-show-keybind
+        (insert (concat "g:   Refresh buffer\n"
+                        "e:   Enable the whole session [E]\n"
+                        "d:   Disable the whole session [D]\n"
+                        "r:   Release out of enable/disable list\n"
+                        "RET: Toggle active/inactive\n"
+                        "\n")))
     (insert (concat "Active" "  |  " "Inactive" "\n"))
     ;; Adjust buffer
     (goto-char (point-min))
     (while (re-search-forward "^\\s-*|\\s-*$" nil t)
       (delete-region (match-beginning 0) (match-end 0)))
     (align-regexp (point-min) (point-max) "\\(\\s-*\\)|")
+    (manage-minor-mode-whole-session-show)
     ;; highlight last toggled mode
     (when $last-toggled-item
       (mapc (lambda ($m)
@@ -246,6 +384,8 @@ Set minor-mode active/inactive when major-mode changed.
                                    'face 'manage-minor-mode-face-changed)))
             $last-toggled-item))
     (goto-char (point-min))
+    (when (re-search-forward "^Active" nil t)
+      (goto-char (point-at-bol)))
     (read-only-mode)
     (use-local-map manage-minor-mode-map)))
 
