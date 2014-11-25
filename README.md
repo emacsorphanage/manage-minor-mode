@@ -1,6 +1,6 @@
 # Manage your minor-mode on the dedicated interface buffer
 
-![manage-minor-mode](https://raw2.github.com/ShingoFukuyama/images/master/manage-minor-mode.png)
+![manage-minor-mode](https://raw.githubusercontent.com/ShingoFukuyama/images/master/manage-minor-mode.png)
 
 ## Usage
 
@@ -60,4 +60,4 @@ List minor-modes that exception from `manage-minor-mode-bals` like below.
 
 You can click minor-mode indicated in the mode-line to pop up manage-minor-mode menu item.
 
-![manage-minor-mode-menu](https://raw2.github.com/ShingoFukuyama/images/master/manage-minor-mode-menu.png)
+![manage-minor-mode-menu](https://raw.githubusercontent.com/ShingoFukuyama/images/master/manage-minor-mode-menu.png)
