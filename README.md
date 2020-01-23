@@ -3,7 +3,9 @@
 
 # Manage your minor-mode on the dedicated interface buffer
 
-![manage-minor-mode](./screenshot/manage-minor-mode.png)
+<p align="center">
+  <img src="./screenshot/manage-minor-mode.png" width="675" height="657"/>
+</p>
 
 ## Usage
 
@@ -45,8 +47,8 @@ set this value nil like below.
 ## Eradicate all minor-modes
 
 When you in the target buffer or "*manage-minor-mode*" buffer,
-M-x `manage-minor-mode-bals` to disable all minor-modes.  
-M-x `manage-minor-mode-restore-from-bals` to restore the minor-modes before `manage-minor-mode-bals` done.  
+M-x `manage-minor-mode-bals` to disable all minor-modes.
+M-x `manage-minor-mode-restore-from-bals` to restore the minor-modes before `manage-minor-mode-bals` done.
 It might be useful when you view a huge size file smoothly.
 
 List minor-modes that exception from `manage-minor-mode-bals` like below.
