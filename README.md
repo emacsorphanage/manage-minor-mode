@@ -3,7 +3,7 @@
 
 # Manage your minor-mode on the dedicated interface buffer
 
-![manage-minor-mode](https://raw.githubusercontent.com/ShingoFukuyama/images/master/manage-minor-mode.png)
+![manage-minor-mode](./screenshot/manage-minor-mode.png)
 
 ## Usage
 
