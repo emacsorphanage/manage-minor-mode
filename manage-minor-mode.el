@@ -60,7 +60,7 @@
 (defvar manage-minor-mode-buffer "*manage-minor-mode*")
 
 (defface manage-minor-mode-face-active
-  '((t :inherit success :foreground "#33eeeee"))
+  '((t :inherit success :foreground "#33eeee"))
   "Face for active minor modes"
   :group 'manage-minor-mode)
 
