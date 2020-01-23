@@ -21,7 +21,7 @@ You can also press [r] on any minor-mode to eliminate out of the list.
 
 ## Set minor-modes status for each major-mode in advance
 
-```
+```el
 (setq manage-minor-mode-default
       '((global
          (on   rainbow-mode)
@@ -39,7 +39,7 @@ Default value of `manage-minor-mode-always-show-keybind` is t.
 If you want to hide keybinding info displaying on the top of the buffer,
 set this value nil like below.
 
-```
+```el
 (setq manage-minor-mode-always-show-keybind nil)
 ```
 
@@ -53,7 +53,7 @@ It might be useful when you view a huge size file smoothly.
 
 List minor-modes that exception from `manage-minor-mode-bals` like below.
 
-```
+```el
 (setq manage-minor-mode-bals-exclude-list
       '((global (recentf-mode global-font-lock-mode delete-selection-mode transient-mark-mode tabbar-mode))
         (text-mode (line-number-mode))
