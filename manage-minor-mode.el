@@ -265,7 +265,7 @@
 (defvar manage-minor-mode-target-info nil)
 
 (defun manage-minor-mode--get-target-info ($key)
-  "Get target info."
+  "Get target info $KEY."
   (car (assoc-default $key manage-minor-mode-target-info)))
 
 (defun manage-minor-mode-refresh (&optional $mode-for-highlight $line $column)
@@ -308,7 +308,8 @@
 
 ;;;###autoload
 (defun manage-minor-mode (&optional $last-toggled-item)
-  "The minor mode."
+  "The minor mode.
+Record for the $LAST-TOGGLED-ITEM."
   (interactive)
   (and $last-toggled-item
        (not (listp $last-toggled-item))
