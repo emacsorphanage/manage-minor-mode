@@ -1,4 +1,5 @@
 [![MELPA](https://melpa.org/packages/manage-minor-mode-badge.svg)](https://melpa.org/#/manage-minor-mode)
+[![MELPA Stable](https://stable.melpa.org/packages/manage-minor-mode-badge.svg)](https://stable.melpa.org/#/manage-minor-mode)
 
 
 # Manage your minor-mode on the dedicated interface buffer
