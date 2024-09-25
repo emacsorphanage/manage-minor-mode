@@ -1,11 +1,11 @@
 ;;; manage-minor-mode.el --- Manage your minor-modes easily -*- lexical-binding: t -*-
 
 ;; Copyright (C) 2014 by Shingo Fukuyama
-;; Copyright (C) 2020-2021 Shen, Jen-Chieh
+;; Copyright (C) 2020-2024 Shen, Jen-Chieh
 
 ;; Version: 1.1
 ;; Author: Shingo Fukuyama - http://fukuyama.co
-;; Maintainer: Jen-Chieh Shen <jcs090218@gmail.com>
+;; Maintainer: Shen, Jen-Chieh <jcs090218@gmail.com>
 ;; URL: https://github.com/ShingoFukuyama/manage-minor-mode
 ;; Created: Mar 8 2014
 ;; Keywords: tools minor-mode manage emacs
