@@ -7,3 +7,6 @@
 *.elc
 
 /.eask
+
+# OS generated
+.DS_Store
